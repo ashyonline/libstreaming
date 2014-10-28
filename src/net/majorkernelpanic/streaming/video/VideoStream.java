@@ -495,6 +495,7 @@ public abstract class VideoStream extends MediaStream {
 		updateCamera();
 
 		// Estimates the framerate of the camera
+		// Code disabled to avoid changing the desired encoding framerate.
 		// measureFramerate();
 
 		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
@@ -539,8 +540,7 @@ public abstract class VideoStream extends MediaStream {
 				Looper.prepare();
 				mCameraLooper = Looper.myLooper();
 				try {
-					//mCamera = Camera.open(mCameraId);
-                    mCamera = Camera.open(0);
+					mCamera = Camera.open(mCameraId);
 				} catch (RuntimeException e) {
 					exception[0] = e;
                     Log.e(TAG, "failed to open camera", e);
@@ -653,7 +653,6 @@ public abstract class VideoStream extends MediaStream {
 		parameters.setPreviewSize(mQuality.resX, mQuality.resY);
 
 		parameters.setPreviewFpsRange(max[0], max[1]);
-        //parameters.setPreviewFpsRange(max[0], max[0]);
 
 		try {
 			mCamera.setParameters(parameters);

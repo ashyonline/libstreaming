@@ -622,11 +622,14 @@ public class Session {
 
 	}
 
+
 	/** 
 	 * Toggles the LED of the phone if it has one.
 	 * You can get the current state of the flash with 
 	 * {@link Session#getVideoTrack()} and {@link VideoStream#getFlashState()}.
 	 **/
+
+    /*
 	public void toggleFlash() {
 		mHandler.post(new Runnable() {
 			@Override
@@ -684,7 +687,7 @@ public void setSize(final int w, final int h) {
 	return size;
 	}
 
-
+*/
 
 
 	/** Deletes all existing tracks & release associated resources. */

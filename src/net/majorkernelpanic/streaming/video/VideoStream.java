@@ -23,6 +23,7 @@ package net.majorkernelpanic.streaming.video;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -276,7 +277,7 @@ public abstract class VideoStream extends MediaStream {
 	public synchronized void start() throws IllegalStateException, IOException {
 		if (!mPreviewStarted) mCameraOpenedManually = false;
 		super.start();
-		Log.d(TAG,"Stream configuration: FPS: "+mQuality.framerate+" Width: "+mQuality.resX+" Height: "+mQuality.resY);
+		Log.d(TAG,"Stream configuration: FPS: "+mQuality.framerate+" Width: "+mQuality.resX+" Height: "+mQuality.resY + " bitrate: " + mQuality.bitrate);
 	}
 
 	/** Stops the stream. */
@@ -494,7 +495,7 @@ public abstract class VideoStream extends MediaStream {
 		updateCamera();
 
 		// Estimates the framerate of the camera
-		measureFramerate();
+		// measureFramerate();
 
 		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
 
@@ -503,7 +504,7 @@ public abstract class VideoStream extends MediaStream {
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
 		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mQuality.framerate);	
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 10);
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 		Surface surface = mMediaCodec.createInputSurface();
 		((SurfaceView)mSurfaceView).addMediaCodecSurface(surface);
@@ -538,9 +539,11 @@ public abstract class VideoStream extends MediaStream {
 				Looper.prepare();
 				mCameraLooper = Looper.myLooper();
 				try {
-					mCamera = Camera.open(mCameraId);
+					//mCamera = Camera.open(mCameraId);
+                    mCamera = Camera.open(0);
 				} catch (RuntimeException e) {
 					exception[0] = e;
+                    Log.e(TAG, "failed to open camera", e);
 				} finally {
 					lock.release();
 					Looper.loop();
@@ -600,7 +603,7 @@ public abstract class VideoStream extends MediaStream {
 						mCamera.setPreviewDisplay(mSurfaceView.getHolder());
 					}
 				} catch (IOException e) {
-					throw new InvalidSurfaceException("Invalid surface !");
+					throw new InvalidSurfaceException("Invalid surface !", e);
 				}
 
 			} catch (RuntimeException e) {
@@ -648,7 +651,9 @@ public abstract class VideoStream extends MediaStream {
 		
 		parameters.setPreviewFormat(mCameraImageFormat);
 		parameters.setPreviewSize(mQuality.resX, mQuality.resY);
+
 		parameters.setPreviewFpsRange(max[0], max[1]);
+        //parameters.setPreviewFpsRange(max[0], max[0]);
 
 		try {
 			mCamera.setParameters(parameters);
@@ -692,8 +697,8 @@ public abstract class VideoStream extends MediaStream {
 
 public void setCameraPreviewSize(int w, int h) {
 		
-		List<Size> size = getSizes();
-		Size size_to_use  = getOptimalSize(size, w, h);
+		List<Camera.Size> size = getSizes();
+		Camera.Size size_to_use  = getOptimalSize(size, w, h);
 		
 		System.out.println("Setting preview to: "+ w + h);
 		
@@ -710,7 +715,7 @@ public void setCameraPreviewSize(int w, int h) {
         try {
 			mCamera.setParameters(parameters);
 			System.out.println("Setting preview to: "+ size_to_use.width + size_to_use.height + " DONE!!");
-			Size z = parameters.getPreviewSize();
+			Camera.Size z = parameters.getPreviewSize();
 			int w_temp = z.width;
 			int h_temp = z.height;
 			System.out.println("Saved preview is: "+ w_temp + h_temp);
@@ -730,9 +735,9 @@ public void setCameraPreviewSize(int w, int h) {
 	}
 	
 	
-	public synchronized List<Size> getSizes() {
+	public synchronized List<Camera.Size> getSizes() {
 		
-		List<Size> size = null;
+		List<Camera.Size> size = null;
 		
 		if (mCamera != null) {
 
@@ -767,17 +772,17 @@ public void setCameraPreviewSize(int w, int h) {
 	
 	
 	
-	  private Size getOptimalSize(List<Size> sizes, int w, int h) {
+	  private Camera.Size getOptimalSize(List<Camera.Size> sizes, int w, int h) {
 
 	        final double ASPECT_TOLERANCE = 0.2;        
 	        double targetRatio = (double) w / h;         
 	        if (sizes == null)             
 	            return null;          
-	        Size optimalSize = null;         
+	        Camera.Size optimalSize = null;
 	        double minDiff = Double.MAX_VALUE;          
 	        int targetHeight = h;          
 	        // Try to find an size match aspect ratio and size         
-	        for (Size size : sizes) 
+	        for (Camera.Size size : sizes)
 	        {             
            
 	            double ratio = (double) size.width / size.height;            
@@ -794,7 +799,7 @@ public void setCameraPreviewSize(int w, int h) {
 	        if (optimalSize == null)
 	        {
 	            minDiff = Double.MAX_VALUE;             
-	            for (Size size : sizes) {
+	            for (Camera.Size size : sizes) {
 	                if (Math.abs(size.height - targetHeight) < minDiff)
 	                {
 	                    optimalSize = size;
